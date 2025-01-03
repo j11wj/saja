@@ -17,76 +17,80 @@ class BasketPage extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    controller.fetchBasket();
     return Scaffold(
       backgroundColor: Colors.white,
-      body: Obx(
-        () {
-          if (controller.baskets.isEmpty) {
-            return Center(child: CircularProgressIndicator());
-          }
-          return SizedBox(
-            width: double.infinity,
-            child: Column(
-              children: [
-                Padding(
-                  padding: EdgeInsets.only(top: 62.h, bottom: 14.h),
-                  child: Text(
-                    "Basket",
-                    style: TextStyle(
-                      color: primaryColor,
-                      fontSize: 25.sp,
-                      fontWeight: FontWeight.w900,
+      body: SizedBox(
+        width: double.infinity,
+        child: Column(
+          children: [
+            Padding(
+              padding: EdgeInsets.only(top: 62.h, bottom: 14.h),
+              child: Text(
+                "Basket",
+                style: TextStyle(
+                  color: primaryColor,
+                  fontSize: 25.sp,
+                  fontWeight: FontWeight.w900,
+                ),
+              ),
+            ),
+            Divider(
+              height: 2.h,
+              color: primaryColor,
+            ),
+            Padding(
+              padding: EdgeInsets.symmetric(vertical: 15.h, horizontal: 16.w),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  SizedBox(
+                    width: MediaQuery.sizeOf(context).width,
+                    child: Text(
+                      'محتويات السلة',
+                      style: TextStyle(
+                        fontSize: 24.sp,
+                        fontWeight: FontWeight.w700,
+                      ),
+                      textDirection: TextDirection.rtl,
                     ),
                   ),
-                ),
-                Divider(
-                  height: 2.h,
-                  color: primaryColor,
-                ),
-                Padding(
-                  padding:
-                      EdgeInsets.symmetric(vertical: 15.h, horizontal: 16.w),
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      SizedBox(
-                        width: MediaQuery.sizeOf(context).width,
-                        child: Text(
-                          'محتويات السلة',
-                          style: TextStyle(
-                            fontSize: 24.sp,
-                            fontWeight: FontWeight.w700,
-                          ),
-                          textDirection: TextDirection.rtl,
-                        ),
-                      ),
-                    ],
-                  ),
-                ),
-                SizedBox(
+                ],
+              ),
+            ),
+            FutureBuilder(
+              future: controller.getBasket(),
+              builder: (context, snapshot) {
+                if (snapshot.connectionState == ConnectionState.waiting) {
+                  return const CircularProgressIndicator();
+                } else if (snapshot.hasError) {
+                  return Text('Error: ${snapshot.error}');
+                } else if (!snapshot.hasData || snapshot.data!.docs.isEmpty) {
+                  return const Text('لا توجد منتجات في السلة');
+                }
+                print(snapshot.data!.docs);
+                return SizedBox(
                   height: 550.h,
                   child: ListView.builder(
                     shrinkWrap: true,
-                    itemCount: controller.baskets.length,
+                    itemCount: snapshot.data!.docs.length,
                     itemBuilder: (context, index) {
                       return _basketWidget(
-                        basket: controller.baskets[index],
+                        basket: snapshot.data!.docs[index],
                         controller: controller,
                       );
                     },
                   ),
-                ),
-              ],
-            ),
-          );
-        },
+                );
+              },
+            )
+          ],
+        ),
       ),
     );
   }
 
   Widget _basketWidget(
-      {required Basket basket, required HomeController controller}) {
+      {required var basket, required HomeController controller}) {
     TextEditingController name = TextEditingController();
     TextEditingController loc = TextEditingController();
     TextEditingController phone = TextEditingController();
@@ -115,12 +119,14 @@ class BasketPage extends StatelessWidget {
             padding: EdgeInsets.only(top: 150.h),
             child: GestureDetector(
               onTap: () async {
+                
                 Get.snackbar(
                   'تمت العملية',
                   'تم حذف المنتج',
                   duration: Duration(milliseconds: 2000),
                 );
                 controller.deleteBasket(basket.id);
+                controller.update();
               },
               child: Container(
                 padding: EdgeInsets.symmetric(horizontal: 20.w, vertical: 2.h),
@@ -297,14 +303,14 @@ class BasketPage extends StatelessWidget {
               mainAxisAlignment: MainAxisAlignment.spaceAround,
               children: [
                 Text(
-                  '${basket.name!}',
+                  '${basket['name']!}',
                   style: TextStyle(
                     fontSize: 16.sp,
                     fontWeight: FontWeight.w500,
                   ),
                 ),
                 Text(
-                  'السعر: \$${basket.price}',
+                  'السعر: \$${basket['price']}',
                   style: TextStyle(
                     fontSize: 16.sp,
                     fontWeight: FontWeight.w500,

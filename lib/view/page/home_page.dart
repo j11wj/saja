@@ -330,9 +330,10 @@ class HomePage extends StatelessWidget {
                       child: SizedBox(
                         height: 50.h,
                         width: 50.w,
-                        child: Image.memory(
-                          base64Decode(item.image),
-                          fit: BoxFit.cover,
+                        child: Image.asset(
+                          item.image,
+                          height: 50.h,
+                          width: 50.w,
                         ),
                       ),
                     ),

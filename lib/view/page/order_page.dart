@@ -12,39 +12,45 @@ class OrderPage extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     controller.fetchOrders();
-    return Obx(
-      () {
-        if (controller.baskets.isEmpty) {
-          return Center(child: CircularProgressIndicator());
-        }
-        return Scaffold(
-          body: SingleChildScrollView(
-            child: SizedBox(
-              width: MediaQuery.sizeOf(context).width,
-              child: Column(
-                children: [
-                  Padding(
-                    padding: EdgeInsets.only(top: 62.h, bottom: 14.h),
-                    child: Text(
-                      "Order's",
-                      style: TextStyle(
-                        color: primaryColor,
-                        fontSize: 25.sp,
-                        fontWeight: FontWeight.w900,
-                      ),
-                    ),
-                  ),
-                  Divider(
-                    height: 2.h,
+
+    return Scaffold(
+      body: SingleChildScrollView(
+        child: SizedBox(
+          width: MediaQuery.sizeOf(context).width,
+          child: Column(
+            children: [
+              Padding(
+                padding: EdgeInsets.only(top: 62.h, bottom: 14.h),
+                child: Text(
+                  "Order's",
+                  style: TextStyle(
                     color: primaryColor,
+                    fontSize: 25.sp,
+                    fontWeight: FontWeight.w900,
                   ),
-                  Padding(
+                ),
+              ),
+              Divider(
+                height: 2.h,
+                color: primaryColor,
+              ),
+              FutureBuilder(
+                future: controller.getOrders(),
+                builder: (context, snapshot) {
+                  if (snapshot.connectionState == ConnectionState.waiting) {
+                    return const CircularProgressIndicator();
+                  } else if (snapshot.hasError) {
+                    return Text('Error: ${snapshot.error}');
+                  } else if (!snapshot.hasData || snapshot.data!.docs.isEmpty) {
+                    return const Text('لا توجد منتجات في قائمة الطلبات');
+                  }
+                  return Padding(
                     padding:
                         EdgeInsets.only(top: 15.h, right: 16.w, left: 16.w),
                     child: SizedBox(
                       height: 620.h,
                       child: ListView.builder(
-                        itemCount: controller.orders.length,
+                        itemCount: snapshot.data!.docs.length,
                         shrinkWrap: true,
                         itemBuilder: (context, index) {
                           return Container(
@@ -93,6 +99,9 @@ class OrderPage extends StatelessWidget {
                                                   ),
                                                   GestureDetector(
                                                     onTap: () {
+                                                      controller.deleteOrder(
+                                                          snapshot.data!
+                                                              .docs[index].id);
                                                       Get.back();
                                                     },
                                                     child: Container(
@@ -169,13 +178,13 @@ class OrderPage extends StatelessWidget {
                                         ),
                                       ),
                                       Text(
-                                        'المبلغ المستحق: \$${controller.orders[index].price}',
+                                        'المبلغ المستحق: \$${snapshot.data!.docs[index]['price']}',
                                         style: TextStyle(
                                           color: Colors.black,
                                         ),
                                       ),
                                       Text(
-                                        'اسم الزبون: ${controller.orders[index].nameOfUser}',
+                                        'اسم الزبون: ${snapshot.data!.docs[index]['nameOfUser']}',
                                         style: TextStyle(
                                           color: Colors.black,
                                         ),
@@ -204,13 +213,13 @@ class OrderPage extends StatelessWidget {
                         },
                       ),
                     ),
-                  ),
-                ],
+                  );
+                },
               ),
-            ),
+            ],
           ),
-        );
-      },
+        ),
+      ),
     );
   }
 }

@@ -3,6 +3,7 @@ import 'dart:io';
 import 'package:android_id/android_id.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:device_info_plus/device_info_plus.dart';
+import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 
 import '../firebase/firebase_servis.dart';
@@ -86,6 +87,19 @@ class HomeController extends GetxController {
     }
   }
 
+  Future<QuerySnapshot> getBasket() async {
+    final querySnapshot = await FirebaseFirestore.instance
+        .collection('basket')
+        .where('deviceId', isEqualTo: await getId())
+        .get();
+
+    // Map Firestore documents to Category objects
+
+    return querySnapshot;
+
+    //delete Basket from Firestore
+  }
+
   var baskets = <Basket>[].obs; // Observable list of categories
 
   // Fetch categories from Firestore
@@ -133,6 +147,15 @@ class HomeController extends GetxController {
     //delete Basket from Firestore
   }
 
+  // Fetch categories from Firestore
+  Future<QuerySnapshot> getOrders() async {
+    final querySnapshot = await FirebaseFirestore.instance
+        .collection('order')
+        .where('deviceId', isEqualTo: await getId())
+        .get();
+    return querySnapshot;
+  }
+
   var orders = <Order>[].obs; // Observable list of categories
 
   // Fetch categories from Firestore
@@ -155,8 +178,19 @@ class HomeController extends GetxController {
   Future<void> deleteBasket(String id) async {
     var db = FirebaseFirestore.instance;
     await db.collection('basket').doc(id).delete();
-    baskets.clear();
-    fetchBasket();
+
+    // Update the UI
+
+    getBasket();
+    update();
+  }
+  Future<void> deleteOrder(String id) async {
+    var db = FirebaseFirestore.instance;
+    await db.collection('order').doc(id).delete();
+
+    // Update the UI
+
+    getBasket();
     update();
   }
 

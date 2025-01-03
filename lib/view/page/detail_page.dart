@@ -96,8 +96,8 @@ class _DetailPageState extends State<DetailPage> {
                 children: [
                   SizedBox(
                     width: double.infinity,
-                    height: 400,
-                    child: Image.memory(base64Decode(widget.items.image)),
+                    height: 400.h,
+                    child: Image.asset(widget.items.image),
                   ),
                 ],
               ),
@@ -183,10 +183,10 @@ class _DetailPageState extends State<DetailPage> {
                                         child: SizedBox(
                                           height: 50.h,
                                           width: 50.w,
-                                          child: Image.memory(
-                                            base64Decode(
-                                                '${widget.suggestions[index].image}'),
-                                            fit: BoxFit.cover,
+                                          child: Image.asset(
+                                            widget.suggestions[index].image,
+                                            height: 50.h,
+                                            width: 50.w,
                                           ),
                                         ),
                                       ),
