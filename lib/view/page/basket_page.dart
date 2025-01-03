@@ -119,7 +119,6 @@ class BasketPage extends StatelessWidget {
             padding: EdgeInsets.only(top: 150.h),
             child: GestureDetector(
               onTap: () async {
-                
                 Get.snackbar(
                   'تمت العملية',
                   'تم حذف المنتج',
@@ -193,8 +192,8 @@ class BasketPage extends StatelessWidget {
                                       var db = FirebaseFirestore.instance;
                                       await db.collection('order').doc().set({
                                         'id': basket.id,
-                                        'nameOfProdect': basket.name,
-                                        'price': basket.price,
+                                        'nameOfProdect': basket['name'],
+                                        'price': basket['price'],
                                         'deviceId': deId,
                                         'phone': phone.text,
                                         'address': loc.text,
