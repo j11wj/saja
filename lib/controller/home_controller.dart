@@ -1,31 +1,46 @@
 import 'dart:io';
 
 import 'package:android_id/android_id.dart';
-import 'package:cloud_firestore/cloud_firestore.dart';
+
 import 'package:device_info_plus/device_info_plus.dart';
+import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
+import 'package:saja_stor_app/model/basket.dart';
+import 'package:saja_stor_app/model/category.dart';
+import 'package:saja_stor_app/model/items.dart';
+import 'package:saja_stor_app/model/order.dart';
 
-import '../firebase/firebase_servis.dart';
+// import '../firebase/firebase_servis.dart';
 
 class HomeController extends GetxController {
-  final FirebaseService _firebaseService = FirebaseService();
+  // final FirebaseService _firebaseService = FirebaseService();
 
-  var dataList = <Map<String, dynamic>>[].obs;
-  var isLoading = false.obs;
+  // var dataList = <Map<String, dynamic>>[].obs;
+  // var isLoading = false.obs;
 
-  // Fetch data
-  Future<void> fetchData(String collectionName) async {
-    try {
-      isLoading(true);
-      var data = await _firebaseService.getCollectionData(collectionName);
-      dataList.assignAll(data);
-    } catch (e) {
-      Get.snackbar("Error", e.toString());
-    } finally {
-      isLoading(false);
-    }
+  // // Fetch data
+  // Future<void> fetchData(String collectionName) async {
+  //   try {
+  //     isLoading(true);
+  //     var data = await _firebaseService.getCollectionData(collectionName);
+  //     dataList.assignAll(data);
+  //   } catch (e) {
+  //     Get.snackbar("Error", e.toString());
+  //   } finally {
+  //     isLoading(false);
+  //   }
+  // }
+var searchText = ''.obs;
+void searchItems(String query) {
+  if (query.isEmpty) {
+    fetchItems(CatName: CatName); // إعادة تحميل كل العناصر إذا كان النص فارغًا
+  } else {
+    items.value = items.where((item) {
+      return item.name.toLowerCase().contains(query.toLowerCase());
+    }).toList();
   }
+}
 
   int navIndex = 0;
 
@@ -51,12 +66,13 @@ class HomeController extends GetxController {
     }
   }
 
+  String CatName = 'All';
   var items = <Items>[].obs; // Observable list of categories
 
   // Fetch items from Firestore
   Future<void> fetchItems({CatName}) async {
     try {
-      if (CatName == null) {
+      if (CatName == 'All') {
         final querySnapshot =
             await FirebaseFirestore.instance.collection('items').get();
 
@@ -122,24 +138,16 @@ class HomeController extends GetxController {
   } // Fetch categories from Firestore
 
   var suggestion = <Items?>[].obs;
-  Future<void> fetchSugection(String type, {String? id}) async {
+  fetchSugection({required List suggestionId, required it}) {
     try {
-      final querySnapshot = await FirebaseFirestore.instance
-          .collection('items')
-          .where('type', isEqualTo: type)
-          .get();
-
-      // Map Firestore documents to Category objects
-      suggestion.value = querySnapshot.docs
-          .map((doc) {
-            if (doc.id != id) {
-              return Items.fromFirestore(doc.id, doc.data());
-            } else {
-              return null; // Mark as null to skip
-            }
-          })
-          .where((item) => item != null)
-          .toList();
+      for (var i = 0; i < it.length; i++) {
+        print('Error fetching');
+        if (suggestionId.contains(it[i].id)) {
+          print('element.id ${it[i].id}');
+          suggestion.add(it[i]);
+        } else {}
+      }
+      update();
     } catch (e) {
       print('Error fetching categories: $e');
     }
@@ -156,7 +164,7 @@ class HomeController extends GetxController {
     return querySnapshot;
   }
 
-  var orders = <Order>[].obs; // Observable list of categories
+  var orders = <Orders>[].obs; // Observable list of categories
 
   // Fetch categories from Firestore
   Future<void> fetchOrders() async {
@@ -168,7 +176,7 @@ class HomeController extends GetxController {
 
       // Map Firestore documents to Category objects
       orders.value = querySnapshot.docs.map((doc) {
-        return Order.fromFirestore(doc.id, doc.data());
+        return Orders.fromFirestore(doc.id, doc.data());
       }).toList();
     } catch (e) {
       print('Error fetching categories: $e');
@@ -184,6 +192,7 @@ class HomeController extends GetxController {
     getBasket();
     update();
   }
+
   Future<void> deleteOrder(String id) async {
     var db = FirebaseFirestore.instance;
     await db.collection('order').doc(id).delete();
@@ -205,101 +214,5 @@ class HomeController extends GetxController {
       var androidDeviceInfo = await deviceInfo.androidInfo;
       return AndroidId().getId(); // unique ID on Android
     }
-  }
-}
-
-class Order {
-  String id;
-  String diveceId;
-  String price;
-  String phone;
-  String address;
-  String nameOfUser;
-  String date;
-  Order({
-    required this.id,
-    required this.diveceId,
-    required this.price,
-    required this.phone,
-    required this.address,
-    required this.nameOfUser,
-    required this.date,
-  });
-  // Factory method to create a Order object from Firestore data
-  factory Order.fromFirestore(String id, Map<String, dynamic> data) {
-    return Order(
-      id: id,
-      diveceId: data['deviceId'] ?? '',
-      price: data['price'] ?? '',
-      phone: data['phone'] ?? '',
-      address: data['address'] ?? '',
-      nameOfUser: data['nameOfUser'] ?? '',
-      date: data['date'] ?? '',
-    );
-  }
-}
-
-class Basket {
-  String id;
-  String name;
-  String price;
-  Basket({
-    required this.id,
-    required this.name,
-    required this.price,
-  });
-  // Factory method to create a Basket object from Firestore data
-  factory Basket.fromFirestore(String id, Map<String, dynamic> data) {
-    return Basket(
-      id: id,
-      name: data['name'] ?? '',
-      price: data['price'] ?? '',
-    );
-  }
-}
-
-class Items {
-  String id;
-  String name;
-  String price;
-  String description;
-  String image;
-  String type;
-  String category;
-  Items({
-    required this.id,
-    required this.name,
-    required this.price,
-    required this.description,
-    required this.image,
-    required this.type,
-    required this.category,
-  });
-  // Factory method to create a Items object from Firestore data
-  factory Items.fromFirestore(String id, Map<String, dynamic> data) {
-    return Items(
-      id: id,
-      name: data['name'] ?? '',
-      price: data['price'] ?? '',
-      description: data['discription'] ?? '',
-      image: data['image'] ?? '',
-      type: data['type'] ?? '',
-      category: data['category'] ?? '',
-    );
-  }
-}
-
-class Category {
-  String id;
-  String name;
-
-  Category({required this.id, required this.name});
-
-  // Factory method to create a Category object from Firestore data
-  factory Category.fromFirestore(String id, Map<String, dynamic> data) {
-    return Category(
-      id: id,
-      name: data['name'] ?? '',
-    );
   }
 }

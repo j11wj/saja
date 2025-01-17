@@ -3,9 +3,9 @@ import 'package:flutter/material.dart';
 import 'package:firebase_core/firebase_core.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:get/get.dart';
-import 'package:saja_stor_app/view/page/nav_bar_page.dart';
+import 'package:saja_stor_app/view/nav_bar_page.dart';
 
-import 'firebase/firebase_servis.dart';
+// import 'firebase/firebase_servis.dart';
 import 'firebase_options.dart';
 
 void main() async {
