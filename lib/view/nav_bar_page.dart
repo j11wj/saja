@@ -41,8 +41,9 @@ class NavBarPage extends StatelessWidget {
           children: [
             GestureDetector(
               onTap: () {
-               
                 controller.changeNavIndex(0);
+                // controller.fetchItems();
+                // print(controller.items.length);
               },
               child: Container(
                 padding: EdgeInsets.all(10.h.w),

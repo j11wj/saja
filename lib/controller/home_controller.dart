@@ -4,6 +4,7 @@ import 'package:android_id/android_id.dart';
 
 import 'package:device_info_plus/device_info_plus.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:firebase_core/firebase_core.dart';
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import 'package:saja_stor_app/model/basket.dart';
@@ -14,6 +15,14 @@ import 'package:saja_stor_app/model/order.dart';
 // import '../firebase/firebase_servis.dart';
 
 class HomeController extends GetxController {
+  final _firebase = FirebaseFirestore.instance;
+  @override
+  void onInit()  {
+    //TODO: implement onInit
+    //  fetchItems();
+    //  fetchCategories();
+    super.onInit();
+  }
   // final FirebaseService _firebaseService = FirebaseService();
 
   // var dataList = <Map<String, dynamic>>[].obs;
@@ -31,16 +40,16 @@ class HomeController extends GetxController {
   //     isLoading(false);
   //   }
   // }
-var searchText = ''.obs;
-void searchItems(String query) {
-  if (query.isEmpty) {
-    fetchItems(CatName: CatName); // إعادة تحميل كل العناصر إذا كان النص فارغًا
-  } else {
-    items.value = items.where((item) {
-      return item.name.toLowerCase().contains(query.toLowerCase());
-    }).toList();
+  var searchText = ''.obs;
+  void searchItems(String query) {
+    if (query.isEmpty) {
+      fetchItems(); // إعادة تحميل كل العناصر إذا كان النص فارغًا
+    } else {
+      items.value = items.where((item) {
+        return item.name.toLowerCase().contains(query.toLowerCase());
+      }).toList();
+    }
   }
-}
 
   int navIndex = 0;
 
@@ -54,8 +63,7 @@ void searchItems(String query) {
   // Fetch categories from Firestore
   Future<void> fetchCategories() async {
     try {
-      final querySnapshot =
-          await FirebaseFirestore.instance.collection('category').get();
+      final querySnapshot = await _firebase.collection('category').get();
 
       // Map Firestore documents to Category objects
       categories.value = querySnapshot.docs.map((doc) {
@@ -66,45 +74,57 @@ void searchItems(String query) {
     }
   }
 
-  String CatName = 'All';
+  var CatName = 'All'.obs;
+
+  
   var items = <Items>[].obs; // Observable list of categories
-
-  // Fetch items from Firestore
-  Future<void> fetchItems({CatName}) async {
+  Future<void> fetchItems({String? lastDocumentId}) async {
+    if (lastDocumentId == null) {
+      print('is not empty');
+    }
     try {
+      QuerySnapshot querySnapshot;
+
       if (CatName == 'All') {
-        final querySnapshot =
-            await FirebaseFirestore.instance.collection('items').get();
-
-        items.value = querySnapshot.docs.map((doc) {
-          return Items.fromFirestore(doc.id, doc.data());
-        }).toList();
-      } else {
-        final querySnapshot = await FirebaseFirestore.instance
+        querySnapshot = await _firebase
             .collection('items')
-            .where('category', isEqualTo: '$CatName')
+            .orderBy('id') // يجب أن يكون الحقل مرتبًا
+            .startAfter([lastDocumentId]) // ابدأ بعد آخر مستند تم جلبه
+            .limit(3) // جلب 30 مستند في كل مرة
             .get();
-
-        items.value = querySnapshot.docs.map((doc) {
-          return Items.fromFirestore(doc.id, doc.data());
-        }).toList();
+      } else {
+        querySnapshot = await _firebase
+            .collection('items')
+            .where('category', isEqualTo: CatName)
+            .orderBy('id') // يجب أن يكون الحقل مرتبًا
+            .startAfter([lastDocumentId]) // ابدأ بعد آخر مستند تم جلبه
+            .limit(3) // جلب 30 مستند في كل مرة
+            .get();
       }
 
-      ;
-      // if (CatName == null) {
-      //    querySnapshot =
-      //       await FirebaseFirestore.instance.collection('items').get();
-      // } else {
-      //   querySnapshot =
-      //       await FirebaseFirestore.instance.collection('items').where('category',isEqualTo: '$CatName').get();
-      // }
-    } catch (e) {
-      print('Error fetching categories: $e');
+      // إضافة البيانات الجديدة إلى القائمة الحالية
+      final newItems = querySnapshot.docs.map((doc) {
+        final data = doc.data() as Map<String, dynamic>;
+        return Items.fromFirestore(doc.id, data);
+      }).toList();
+
+      items.addAll(newItems); // إضافة البيانات الجديدة إلى القائمة
+
+      // تحديث الحالة (إذا كنت تستخدم GetX)
+      update();
+
+      // حفظ آخر مستند تم جلبه للاستخدام في الطلب التالي
+      if (querySnapshot.docs.isNotEmpty) {
+        lastDocumentId = querySnapshot.docs.last.id;
+      }
+    } catch (e, stackTrace) {
+      print('Error fetching items: $e');
+      print('Stack trace: $stackTrace');
     }
   }
 
   Future<QuerySnapshot> getBasket() async {
-    final querySnapshot = await FirebaseFirestore.instance
+    final querySnapshot = await _firebase
         .collection('basket')
         .where('deviceId', isEqualTo: await getId())
         .get();
@@ -121,7 +141,7 @@ void searchItems(String query) {
   // Fetch categories from Firestore
   Future<void> fetchBasket() async {
     try {
-      final querySnapshot = await FirebaseFirestore.instance
+      final querySnapshot = await _firebase
           .collection('basket')
           .where('deviceId', isEqualTo: await getId())
           .get();
@@ -137,27 +157,35 @@ void searchItems(String query) {
     //delete Basket from Firestore
   } // Fetch categories from Firestore
 
-  var suggestion = <Items?>[].obs;
-  fetchSugection({required List suggestionId, required it}) {
-    try {
-      for (var i = 0; i < it.length; i++) {
-        print('Error fetching');
-        if (suggestionId.contains(it[i].id)) {
-          print('element.id ${it[i].id}');
-          suggestion.add(it[i]);
-        } else {}
-      }
-      update();
-    } catch (e) {
-      print('Error fetching categories: $e');
+  var suggestions = <Items>[].obs;
+
+  Future<void> fetchSuggestions({required List<String> suggestionIds}) async {
+    suggestions.clear(); // تنظيف القائمة الحالية
+
+    // إذا كانت القائمة `items` فارغة، نقوم بجلب العناصر أولاً
+    if (items.isEmpty) {
+      print("Items list is empty. Fetching items...");
+      await fetchItems();
     }
 
-    //delete Basket from Firestore
+    try {
+      // استخدام `where` لتصفية العناصر التي تتطابق مع `suggestionIds`
+      final matchedItems =
+          items.where((item) => suggestionIds.contains(item.id)).toList();
+
+      // إضافة العناصر المطابقة إلى القائمة `suggestions`
+      suggestions.addAll(matchedItems);
+
+      // تحديث الحالة (إذا كنت تستخدم GetX)
+      update();
+    } catch (e) {
+      print('Error fetching suggestions: $e');
+    }
   }
 
   // Fetch categories from Firestore
   Future<QuerySnapshot> getOrders() async {
-    final querySnapshot = await FirebaseFirestore.instance
+    final querySnapshot = await _firebase
         .collection('order')
         .where('deviceId', isEqualTo: await getId())
         .get();
@@ -169,7 +197,7 @@ void searchItems(String query) {
   // Fetch categories from Firestore
   Future<void> fetchOrders() async {
     try {
-      final querySnapshot = await FirebaseFirestore.instance
+      final querySnapshot = await _firebase
           .collection('order')
           .where('deviceId', isEqualTo: await getId())
           .get();
@@ -184,7 +212,7 @@ void searchItems(String query) {
   }
 
   Future<void> deleteBasket(String id) async {
-    var db = FirebaseFirestore.instance;
+    var db = _firebase;
     await db.collection('basket').doc(id).delete();
 
     // Update the UI
@@ -194,7 +222,7 @@ void searchItems(String query) {
   }
 
   Future<void> deleteOrder(String id) async {
-    var db = FirebaseFirestore.instance;
+    var db = _firebase;
     await db.collection('order').doc(id).delete();
 
     // Update the UI
